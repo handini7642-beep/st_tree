@@ -1,23 +1,26 @@
 import streamlit as st
+from datetime import datetime
 
 # ====================================================================
 # 1. STRUKTUR DATA: NODE UNTUK GENERAL TREE (FILE EXPLORER)
 # ====================================================================
 class FileNode:
-    def __init__(self, nama_item, is_folder=True, ukuran_kb=0):
+    def __init__(self, nama_item, is_folder=True, ukuran_kb=0, tipe_format="File folder"):
         self.nama = nama_item
         self.is_folder = is_folder  
         self.ukuran = ukuran_kb if not is_folder else 0  
+        self.tipe = tipe_format if not is_folder else "File folder"
+        self.tgl_modifikasi = datetime.now().strftime("%d/%m/%Y %H:%M")
         self.children = []          
-        self.parent = None  # Pointer ke induk untuk navigasi
+        self.parent = None  # Pointer ke induk untuk navigasi jalan kembali
 
     def add_child(self, child_node):
         """Menambahkan cabang baru (Insertion)"""
         child_node.parent = self
         self.children.append(child_node)
-  
+
     def dapatkan_path_lengkap(self):
-        """Mendapatkan string jalur unik dari Root sampai Node ini untuk ID Key"""
+        """Mendapatkan string jalur unik dari Root sampai Node ini"""
         jalur = []
         sementara = self
         while sementara is not None:
@@ -27,15 +30,48 @@ class FileNode:
 
 
 # ====================================================================
-# 2. INISIALISASI DRIVE DATA (MIMIC WINDOWS DRIVE)
+# 2. INISIALISASI DATA AWAL (MENIRU REPO FOLDER LAPTOP KAMU)
 # ====================================================================
-st.set_page_config(page_title="Windows File Explorer", page_icon="💻", layout="wide")
+st.set_page_config(page_title="🌸 Aesthetic File Explorer 🦄", page_icon="💖", layout="wide")
 
-# Mengunci data di session_state agar struktur tree tidak ter-reset
+# Custom CSS Google Font & Warna Pastel Gen Z (Lilac, Pink & Soft Blue Theme)
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap');
+    
+    * {
+        font-family: 'Space Grotesk', sans-serif !important;
+    }
+    .stApp {
+        background: linear-gradient(135deg, #fbc5d8 0%, #e6e6fa 100%);
+    }
+    div[data-testid="stBlock"] {
+        background-color: rgba(255, 255, 255, 0.75);
+        border-radius: 16px;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    h1, h2, h3 {
+        color: #6C5CE7 !important;
+    }
+    .stButton>button {
+        background-color: #A29BFE !important;
+        color: white !important;
+        border-radius: 20px !important;
+        border: none !important;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #6C5CE7 !important;
+        transform: scale(1.05);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 if 'root' not in st.session_state:
     root = FileNode("Local Disk (C:)", is_folder=True)
     
-    # Membuat Folder Bawaan
+    # Membuat sub-folder tiruan seperti yang ada di foto laptopmu
     documents = FileNode("Documents", is_folder=True)
     pictures = FileNode("Pictures", is_folder=True)
     downloads = FileNode("Downloads", is_folder=True)
@@ -44,120 +80,115 @@ if 'root' not in st.session_state:
     root.add_child(pictures)
     root.add_child(downloads)
     
-    # Mengisi file bawaan awal
-    documents.add_child(FileNode("Tugas_Struktur_Data.pdf", is_folder=False, ukuran_kb=150))
-    documents.add_child(FileNode("Catatan_Kuliah.txt", is_folder=False, ukuran_kb=45))
+    # Mengisi file tiruan persis di dalam folder Documents kamu
+    documents.add_child(FileNode("ALJABAR", is_folder=True))
+    documents.add_child(FileNode("BASIS DATA SMT 2", is_folder=True))
+    documents.add_child(FileNode("Handini SI 25 P AIS", is_folder=True))
+    documents.add_child(FileNode("Handini Struktur Data Pemrograman", is_folder=True))
+    documents.add_child(FileNode("PENGANTAR JARINGAN KOMPUTER", is_folder=True))
+    documents.add_child(FileNode("Algoritma & Pemrograman.docx", is_folder=False, ukuran_kb=794, tipe_format="Microsoft Word D..."))
+    documents.add_child(FileNode("BASIS DATA LAUNDRY KILOAN OLEH 2.docx", is_folder=False, ukuran_kb=9012, tipe_format="Microsoft Word D..."))
+    documents.add_child(FileNode("basis data oleh oleh 2.xlsx", is_folder=False, ukuran_kb=13, tipe_format="Microsoft Excel W..."))
     
     st.session_state.root = root
 
-# Pointer posisi folder aktif saat ini
 if 'current_folder' not in st.session_state:
     st.session_state.current_folder = st.session_state.root
 
 
 # ====================================================================
-# 3. FUNGSI PEMBANTU NAVIGASI SIDEBAR (REKURSIF COCOK UNTUK UAS)
+# 3. FUNGSI PEMBANTU NAVIGASI SIDEBAR
 # ====================================================================
 def dapatkan_breadcrumb(node):
-    """Membuat susunan alamat teks di Address Bar atas"""
-    jalur = []
-    sementara = node
-    while sementara is not None:
-        jalur.insert(0, sementara.nama)
-        sementara = sementara.parent
-    return " 💻 This PC  ➔  " + "  ➔  ".join(jalur)
+    return " 📂 This PC > " + " > ".join([] if node is None else [sementara.nama for sementara in [] if False else (lambda n: (lambda f, x: f(f, x))(lambda f, c: [c.nama] + f(f, c.parent) if c.parent else [c.nama], n)[::-1])(node)])
 
 def render_sidebar_tree(node, depth=0):
-    """Mencetak struktur pohon di sidebar kiri dengan Key Tombol yang Unik"""
+    """Mencetak pohon navigasi folder di bilah kiri"""
     indentasi = "    " * depth
     if node.is_folder:
-        # Membuat key unik gabungan dari path lengkap agar tombol bisa diklik normal
-        key_tombol = f"btn_side_{node.dapatkan_path_lengkap()}_{depth}"
-        
-        if st.sidebar.button(f"{indentasi}📁 {node.nama}", key=key_tombol, use_container_width=True):
+        key_tombol = f"side_{node.dapatkan_path_lengkap()}_{depth}"
+        if st.sidebar.button(f"{indentasi}🎀 {node.nama}", key=key_tombol, use_container_width=True):
             st.session_state.current_folder = node
             st.rerun()
-            
         for child in node.children:
             render_sidebar_tree(child, depth + 1)
 
 
 # ====================================================================
-# 4. IMPLEMENTASI ANTARMUKA UTAMA (WINDOWS STYLE UI)
+# 4. IMPLEMENTASI ANTARMUKA UTAMA (AESTHETIC WINDOWS DETAILS VIEW)
 # ====================================================================
 
-st.title("💻 Windows File Explorer Simulator")
-st.caption("Aplikasi Kelompok UAS Struktur Data — Implementasi Struktur Data General Tree")
+# Banner Utama Lucu
+st.markdown("<h1 style='text-align: center; font-size: 40px;'>🦄 Storage Tree Master Y2K ✨</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #6C5CE7;'>Aplikasi File Explorer Terlucu & Ter-Aesthetic se-Kampus 🌸</p>", unsafe_allow_html=True)
 st.write("---")
 
-# --- BAGIAN A: WINDOWS TOOLBAR (TAMPILAN BARU UNTUK NEW ITEM & DELETE) ---
-st.markdown("### 🛠️ Windows Ribbon Toolbar")
-with st.container(border=True):
+# --- PANEL MENU ATAS (RIBBON TOOLBAR BARU) ---
+st.markdown("### 🛠️ Cute Ribbon Toolbar")
+with st.container():
     col_t1, col_t2, col_t3, col_t4, col_t5 = st.columns([2, 3, 2, 2, 2])
     
     with col_t1:
-        jenis_baru = st.selectbox("New Item Type", ["Folder", "File"], label_visibility="visible")
+        jenis_baru = st.selectbox("🌈 Tipe Objek", ["Folder", "File"])
     
     with col_t2:
-        # Menggunakan key session_state langsung agar teks bisa dihapus otomatis setelah create
-        if "nama_baru_state" not in st.session_state:
-            st.session_state.nama_baru_state = ""
-        nama_baru = st.text_input("Name", placeholder="Ketik nama...", key="nama_baru_state")
+        if "nama_baru_state" not in st.session_state: st.session_state.nama_baru_state = ""
+        nama_baru = st.text_input("📝 Nama Baru", placeholder="Ketik nama di sini...", key="nama_baru_state")
     
     with col_t3:
         if jenis_baru == "File":
-            if "ukuran_baru_state" not in st.session_state:
-                st.session_state.ukuran_baru_state = 10
-            ukuran_baru = st.number_input("Size (KB)", min_value=1, max_value=5000, key="ukuran_baru_state")
+            ext_pilihan = st.selectbox("🔮 Ekstensi", [".docx (Word)", ".xlsx (Excel)", ".pdf (Acrobat)", ".png (Gambar)", ".txt (Teks)"])
+            if "ukuran_baru_state" not in st.session_state: st.session_state.ukuran_baru_state = 15
+            ukuran_baru = st.number_input("💾 Ukuran (KB)", min_value=1, max_value=99999, key="ukuran_baru_state")
         else:
+            ext_pilihan = ""
             ukuran_baru = 0
-            st.text_input("Size (KB)", value="-", disabled=True)
+            st.text_input("🔮 Ekstensi", value="Folder", disabled=True)
             
     with col_t4:
         st.markdown("<div style='padding-top: 28px;'></div>", unsafe_allow_html=True)
-        if st.button("➕ Create New", type="primary", use_container_width=True):
+        if st.button("✨ Create Object", type="primary", use_container_width=True):
             if nama_baru.strip():
-                # Cek duplikasi nama berkas
-                nama_kembar = any(c.nama.lower() == nama_baru.strip().lower() for c in st.session_state.current_folder.children)
+                nama_fix = nama_baru.strip() + (ext_pilihan.split()[0] if jenis_baru == "File" else "")
+                nama_kembar = any(c.nama.lower() == nama_fix.lower() for c in st.session_state.current_folder.children)
                 
                 if not nama_kembar:
                     is_f = True if jenis_baru == "Folder" else False
-                    st.session_state.current_folder.add_child(FileNode(nama_baru.strip(), is_folder=is_f, ukuran_kb=ukuran_baru))
-                    st.success(f"Sukses membuat {jenis_baru}!")
+                    tipe_str = "File folder" if is_f else f"{ext_pilihan.split()[1][1:-1]} Document"
                     
-                    # AKSI MENGHAPUS TULISAN DI KOLOM INPUT JIKA SUKSES:
+                    # Tambah data ke tree
+                    st.session_state.current_folder.add_child(FileNode(nama_fix, is_folder=is_f, ukuran_kb=ukuran_baru, tipe_format=tipe_str))
+                    st.toast(f"🍭 Yeay! Sukses bikin {jenis_baru} baru!", icon='🎉')
+                    
+                    # MENGHAPUS ISIAN DI KOLOM SECARA OTOMATIS:
                     st.session_state.nama_baru_state = ""
-                    if jenis_baru == "File":
-                        st.session_state.ukuran_baru_state = 10
-                        
-                    st.rerun()  # Refresh halaman agar data langsung muncul di HP & Laptop
+                    st.rerun()
                 else:
-                    st.error("Nama sudah ada!")
+                    st.error("🧁 Waduh, namanya udah ada yang pakai!")
             else:
-                st.warning("Nama wajib diisi!")
+                st.warning("🦄 Namanya jangan dikosongin ya!")
                 
     with col_t5:
         st.markdown("<div style='padding-top: 28px;'></div>", unsafe_allow_html=True)
         if st.session_state.current_folder.children:
-            # Menu drop-down untuk menghapus file secara instan dari toolbar
             opsi_hapus = [c.nama for c in st.session_state.current_folder.children]
-            target_hapus = st.selectbox("Delete Item", ["-- Select Item --"] + opsi_hapus, label_visibility="collapsed")
+            target_hapus = st.selectbox("🗑️ Hapus Objek", ["-- Pilih Item --"] + opsi_hapus, label_visibility="collapsed")
             
-            if target_hapus != "-- Select Item --":
+            if target_hapus != "-- Pilih Item --":
                 node_target = next((c for c in st.session_state.current_folder.children if c.nama == target_hapus), None)
                 if node_target:
                     st.session_state.current_folder.children.remove(node_target)
+                    st.toast(f"Item '{target_hapus}' berhasil dibuang!", icon='🗑️')
                     st.rerun()
         else:
-            st.button("🗑️ Empty Folder", disabled=True, use_container_width=True)
+            st.button("🦄 Folder Kosong", disabled=True, use_container_width=True)
 
 st.write(" ")
 
-# --- BAGIAN B: WINDOWS ADDRESS BAR & BOX PENCARIAN (SEARCH) ---
+# --- WINDOWS PATH ADDRESS BAR & SEARCH BAR ---
 col_up_btn, col_address_bar, col_search_box = st.columns([1, 8, 3])
 
 with col_up_btn:
-    # Tombol panah kembali ke atas (Up Level)
     if st.session_state.current_folder.parent is not None:
         if st.button("⬆️ Up", use_container_width=True):
             st.session_state.current_folder = st.session_state.current_folder.parent
@@ -166,62 +197,74 @@ with col_up_btn:
         st.button("⬆️ Up", disabled=True, use_container_width=True)
 
 with col_address_bar:
-    # Menampilkan jalur folder saat ini secara dinamis
     st.text_input("Address", value=dapatkan_breadcrumb(st.session_state.current_folder), disabled=True, label_visibility="collapsed")
 
 with col_search_box:
-    # Kotak Pencarian Aktif
-    kueri_cari = st.text_input("🔍 Search", placeholder="Search in this folder...", label_visibility="collapsed")
+    kueri_cari = st.text_input("🔍 Search box", placeholder="Cari berkas di sini...", label_visibility="collapsed")
 
 st.write("---")
 
 
-# --- BAGIAN C: PEMBAGIAN PANEL UTAMA (SIDEBAR KIRI & ISI KANAN) ---
+# ====================================================================
+# 5. PEMBAGIAN PANEL UTAMA (NAVIGATION TREE VS DETAILS TABLE VIEW)
+# ====================================================================
 panel_navigasi, panel_konten = st.columns([3, 9], gap="large")
 
-# 1. Tampilan Pengendali di Sidebar Kiri (Navigation Pane)
 with panel_navigasi:
-    st.markdown("### 🖥️ Navigation Pane")
-    if st.sidebar.button("💻 This PC (Go to Root)", use_container_width=True):
+    st.markdown("### 🧸 Navigation Pane")
+    if st.button("💻 This PC (Home)", use_container_width=True):
         st.session_state.current_folder = st.session_state.root
         st.rerun()
-    st.sidebar.markdown("---")
-    
-    # Memanggil algoritma pohon rekursif untuk mencetak isi navigasi samping
+    st.write("---")
     render_sidebar_tree(st.session_state.root)
 
-# 2. Tampilan Isi Folder di Sebelah Kanan (Main Contents Grid View)
 with panel_konten:
     folder_sekarang = st.session_state.current_folder
-    st.markdown(f"## 📂 {folder_sekarang.nama}")
-    
-    # Menyaring item berdasarkan kotak kata kunci Search Bar
+    st.markdown(f"## 🍧 Current Directory: {folder_sekarang.nama}")
+    st.write(" ")
+
+    # Filter data berdasarkan isian kolom search bar (Pencarian Berfungsi Efektif)
     if kueri_cari.strip():
         daftar_tampil = [item for item in folder_sekarang.children if kueri_cari.lower() in item.nama.lower()]
     else:
         daftar_tampil = folder_sekarang.children
 
     if not daftar_tampil:
-        st.info("Folder ini kosong atau item tidak ditemukan.")
+        st.info("🍡 Folder ini masih kosong atau item tidak ditemukan.")
     else:
-        # Mengatur sistem grid 3 kolom menyamping agar muat di layar HP dan laptop
-        kolom_grid = st.columns(3)
-        
-        for urutan, objek in enumerate(daftar_tampil):
-            pilihan_kolom = kolom_grid[urutan % 3]
+        # === MEMBUAT TAMPILAN DETAILS VIEW PERSIS SEPERTI DI FOTO LAPTOP KAMU ===
+        # Membuat baris judul kolom tabel (Header)
+        col_h_nama, col_h_tgl, col_h_tipe, col_h_ukuran, col_h_aksi = st.columns([4, 3, 3, 2, 2])
+        with col_h_nama: st.markdown("**Name** 🔼")
+        with col_h_tgl: st.markdown("**Date modified**")
+        with col_h_tipe: st.markdown("**Type**")
+        with col_h_ukuran: st.markdown("**Size**")
+        with col_h_aksi: st.markdown("**Action**")
+        st.markdown("<hr style='margin: 5px 0px; border-color: #A29BFE;'>", unsafe_allow_html=True)
+
+        # Mencetak baris demi baris berkas secara berurutan ke bawah
+        for idx, item in enumerate(daftar_tampil):
+            col_nama, col_tgl, col_tipe, col_ukuran, col_aksi = st.columns([4, 3, 3, 2, 2])
             
-            with pilihan_kolom:
-                with st.container(border=True):
-                    if objek.is_folder:
-                        st.markdown("### 📁")
-                        st.markdown(f"**{objek.nama}**")
-                        st.caption("Folder")
-                        # Tombol buka folder di panel utama
-                        if st.button("Open Folder", key=f"main_open_{objek.nama}_{urutan}"):
-                            st.session_state.current_folder = objek
-                            st.rerun()
-                    else:
-                        st.markdown("### 📄")
-                        st.markdown(f"**{objek.nama}**")
-                        st.caption(f"File ({objek.ukuran} KB)")
-                        st.button("Properties", key=f"main_prop_{objek.nama}_{urutan}", disabled=True)
+            # Ikon pembeda baris tabel
+            ikon = "🔮" if item.is_folder else "💎"
+            
+            with col_nama:
+                st.write(f"{ikon} {item.nama}")
+            with col_tgl:
+                st.write(f"<span style='color: #747D8C;'>{item.tgl_modifikasi}</span>", unsafe_allow_html=True)
+            with col_tipe:
+                st.write(f"<span style='color: #747D8C;'>{item.tipe}</span>", unsafe_allow_html=True)
+            with col_ukuran:
+                text_ukuran = "-" if item.is_folder else f"{item.ukuran:,} KB"
+                st.write(f"<span style='color: #747D8C;'>{text_ukuran}</span>", unsafe_allow_html=True)
+            with col_aksi:
+                if item.is_folder:
+                    if st.button("Open", key=f"tbl_open_{item.dapatkan_path_lengkap()}_{idx}"):
+                        st.session_state.current_folder = item
+                        st.rerun()
+                else:
+                    st.button("File", key=f"tbl_file_{item.dapatkan_path_lengkap()}_{idx}", disabled=True)
+            
+            # Garis tipis pembatas antar baris data biar rapi
+            st.markdown("<hr style='margin: 2px 0px; border-color: #F1F2F6;'>", unsafe_allow_html=True)
