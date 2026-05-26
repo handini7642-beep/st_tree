@@ -1,12 +1,13 @@
 import streamlit as st
 from collections import deque
+import time
 import random
 
 # =========================================================
-# CONFIG
+# CONFIG PAGE
 # =========================================================
 st.set_page_config(
-    page_title="Maze Solver BFS",
+    page_title="AI Maze Pathfinder",
     page_icon="🧩",
     layout="wide"
 )
@@ -17,12 +18,14 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-body {
-    background-color: #f5f7fb;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
 }
 
 .stApp {
-    background-color: #f5f7fb;
+    background-color: #f4f7fb;
 }
 
 .block-container {
@@ -30,8 +33,8 @@ body {
 }
 
 .title {
-    font-size: 40px;
-    font-weight: bold;
+    font-size: 42px;
+    font-weight: 700;
     color: #111827;
 }
 
@@ -43,25 +46,25 @@ body {
 .card {
     background: white;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 18px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     margin-bottom: 15px;
 }
 
-.maze-box {
+.cell {
     text-align: center;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 10px;
     font-weight: bold;
-    color: white;
     margin: 2px;
+    color: white;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# SIZE MAZE
+# SIZE
 # =========================================================
 ROWS = 10
 COLS = 10
@@ -78,7 +81,6 @@ if "maze" not in st.session_state:
         row = []
 
         for j in range(COLS):
-
             row.append(0)
 
         maze.append(row)
@@ -94,13 +96,19 @@ if "path" not in st.session_state:
 if "visited" not in st.session_state:
     st.session_state.visited = []
 
+if "mode" not in st.session_state:
+    st.session_state.mode = "wall"
+
+if "start_pos" not in st.session_state:
+    st.session_state.start_pos = (0, 0)
+
+if "end_pos" not in st.session_state:
+    st.session_state.end_pos = (ROWS-1, COLS-1)
+
 # =========================================================
 # BFS FUNCTION
 # =========================================================
-def bfs(maze):
-
-    start = (0, 0)
-    end = (ROWS - 1, COLS - 1)
+def bfs(maze, start, end):
 
     queue = deque()
     queue.append((start, [start]))
@@ -121,14 +129,14 @@ def bfs(maze):
         if (x, y) == end:
             return path, visit_order
 
-        arah = [
+        directions = [
             (0, 1),
             (1, 0),
             (-1, 0),
             (0, -1)
         ]
 
-        for dx, dy in arah:
+        for dx, dy in directions:
 
             nx = x + dx
             ny = y + dy
@@ -149,7 +157,7 @@ def bfs(maze):
 # =========================================================
 # RANDOM MAZE
 # =========================================================
-def random_maze():
+def generate_random_maze():
 
     maze = []
 
@@ -176,14 +184,27 @@ def random_maze():
 # =========================================================
 with st.sidebar:
 
-    st.title("🧩 Maze Solver")
-    st.caption("BFS Algorithm")
+    st.title("🧩 AI Maze Pathfinder")
+    st.caption("Breadth First Search")
 
     st.write("")
 
-    if st.button("🎲 Buat Maze Acak", use_container_width=True):
+    st.markdown("## 🎮 Edit Mode")
 
-        st.session_state.maze = random_maze()
+    if st.button("⬛ Wall Mode", use_container_width=True):
+        st.session_state.mode = "wall"
+
+    if st.button("🟩 Set Start", use_container_width=True):
+        st.session_state.mode = "start"
+
+    if st.button("🟥 Set End", use_container_width=True):
+        st.session_state.mode = "end"
+
+    st.write("---")
+
+    if st.button("🎲 Random Maze", use_container_width=True):
+
+        st.session_state.maze = generate_random_maze()
 
         st.session_state.path = []
         st.session_state.visited = []
@@ -192,12 +213,14 @@ with st.sidebar:
 
     if st.button("🚀 Solve BFS", use_container_width=True):
 
-        hasil_path, hasil_visit = bfs(
-            st.session_state.maze
+        path, visited = bfs(
+            st.session_state.maze,
+            st.session_state.start_pos,
+            st.session_state.end_pos
         )
 
-        st.session_state.path = hasil_path
-        st.session_state.visited = hasil_visit
+        st.session_state.path = path
+        st.session_state.visited = visited
 
         st.rerun()
 
@@ -210,7 +233,6 @@ with st.sidebar:
             row = []
 
             for j in range(COLS):
-
                 row.append(0)
 
             maze.append(row)
@@ -221,28 +243,30 @@ with st.sidebar:
         st.session_state.maze = maze
         st.session_state.path = []
         st.session_state.visited = []
+        st.session_state.start_pos = (0, 0)
+        st.session_state.end_pos = (ROWS-1, COLS-1)
 
         st.rerun()
 
     st.write("---")
 
-    st.markdown("### Keterangan")
+    st.markdown("## 📌 Keterangan")
 
     st.markdown("🟩 Start")
     st.markdown("🟥 End")
-    st.markdown("⬛ Tembok")
-    st.markdown("🟦 Dikunjungi")
-    st.markdown("🟨 Jalur")
+    st.markdown("⬛ Wall")
+    st.markdown("🟦 Visited")
+    st.markdown("🟨 Shortest Path")
 
 # =========================================================
 # HEADER
 # =========================================================
 st.markdown("""
 <div class='title'>
-🌐 Maze Solver (BFS)
+🌐 AI Maze Pathfinder
 </div>
 <div class='subtitle'>
-Mencari jalur tercepat menggunakan algoritma BFS
+Visualisasi BFS untuk mencari jalur tercepat
 </div>
 """, unsafe_allow_html=True)
 
@@ -253,12 +277,12 @@ c1, c2, c3 = st.columns(3)
 
 with c1:
 
+    status = "✅ Solusi Ditemukan" if st.session_state.path else "❌ Belum Ada Solusi"
+
     st.markdown(f"""
     <div class='card'>
     <h4>Status</h4>
-    <h2>
-    {"✅ Solusi Ditemukan" if st.session_state.path else "❌ Belum Ada Solusi"}
-    </h2>
+    <h2>{status}</h2>
     </div>
     """, unsafe_allow_html=True)
 
@@ -283,7 +307,7 @@ with c3:
 # =========================================================
 # MAZE DISPLAY
 # =========================================================
-st.write("## Maze")
+st.write("## 🧩 Maze Area")
 
 maze = st.session_state.maze
 path = st.session_state.path
@@ -310,7 +334,7 @@ for i in range(ROWS):
             text = "E"
 
         if (i, j) in visited:
-            warna = "#93c5fd"
+            warna = "#60a5fa"
 
         if (i, j) in path:
             warna = "#facc15"
@@ -321,15 +345,87 @@ for i in range(ROWS):
         if maze[i][j] == "E":
             warna = "#ef4444"
 
+        tombol = cols[j].button(
+            text if text else " ",
+            key=f"{i}-{j}",
+            use_container_width=True
+        )
+
         cols[j].markdown(
             f"""
-            <div class='maze-box'
+            <div class='cell'
             style='background:{warna};'>
             {text}
             </div>
             """,
             unsafe_allow_html=True
         )
+
+        # =====================================================
+        # CLICK EVENT
+        # =====================================================
+        if tombol:
+
+            mode = st.session_state.mode
+
+            # WALL MODE
+            if mode == "wall":
+
+                if maze[i][j] == 0:
+                    maze[i][j] = 1
+
+                elif maze[i][j] == 1:
+                    maze[i][j] = 0
+
+            # START MODE
+            elif mode == "start":
+
+                old_x, old_y = st.session_state.start_pos
+
+                maze[old_x][old_y] = 0
+
+                maze[i][j] = "S"
+
+                st.session_state.start_pos = (i, j)
+
+            # END MODE
+            elif mode == "end":
+
+                old_x, old_y = st.session_state.end_pos
+
+                maze[old_x][old_y] = 0
+
+                maze[i][j] = "E"
+
+                st.session_state.end_pos = (i, j)
+
+            st.session_state.path = []
+            st.session_state.visited = []
+
+            st.rerun()
+
+# =========================================================
+# BFS VISIT ORDER
+# =========================================================
+st.write("---")
+
+st.markdown("## 📍 BFS Traversal")
+
+if st.session_state.visited:
+
+    traversal = " ➜ ".join(
+        [str(node) for node in st.session_state.visited]
+    )
+
+    st.markdown(f"""
+    <div class='card'>
+    {traversal}
+    </div>
+    """, unsafe_allow_html=True)
+
+else:
+
+    st.info("Traversal BFS belum dijalankan.")
 
 # =========================================================
 # FOOTER
@@ -338,6 +434,6 @@ st.write("---")
 
 st.markdown("""
 <center>
-Maze Solver BFS • Struktur Data • Streamlit ❤️
+AI Maze Pathfinder • Struktur Data • BFS Algorithm ❤️
 </center>
 """, unsafe_allow_html=True)
