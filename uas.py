@@ -1,10 +1,8 @@
 import streamlit as st
 from collections import deque
-import time
-import random
 
 # =========================================================
-# CONFIG PAGE
+# PAGE CONFIG
 # =========================================================
 st.set_page_config(
     page_title="AI Maze Pathfinder",
@@ -96,19 +94,13 @@ if "path" not in st.session_state:
 if "visited" not in st.session_state:
     st.session_state.visited = []
 
-if "mode" not in st.session_state:
-    st.session_state.mode = "wall"
-
-if "start_pos" not in st.session_state:
-    st.session_state.start_pos = (0, 0)
-
-if "end_pos" not in st.session_state:
-    st.session_state.end_pos = (ROWS-1, COLS-1)
-
 # =========================================================
 # BFS FUNCTION
 # =========================================================
-def bfs(maze, start, end):
+def bfs(maze):
+
+    start = (0, 0)
+    end = (ROWS - 1, COLS - 1)
 
     queue = deque()
     queue.append((start, [start]))
@@ -155,31 +147,6 @@ def bfs(maze, start, end):
     return [], visit_order
 
 # =========================================================
-# RANDOM MAZE
-# =========================================================
-def generate_random_maze():
-
-    maze = []
-
-    for i in range(ROWS):
-
-        row = []
-
-        for j in range(COLS):
-
-            if random.random() < 0.25:
-                row.append(1)
-            else:
-                row.append(0)
-
-        maze.append(row)
-
-    maze[0][0] = "S"
-    maze[ROWS-1][COLS-1] = "E"
-
-    return maze
-
-# =========================================================
 # SIDEBAR
 # =========================================================
 with st.sidebar:
@@ -189,42 +156,18 @@ with st.sidebar:
 
     st.write("")
 
-    st.markdown("## 🎮 Edit Mode")
-
-    if st.button("⬛ Wall Mode", use_container_width=True):
-        st.session_state.mode = "wall"
-
-    if st.button("🟩 Set Start", use_container_width=True):
-        st.session_state.mode = "start"
-
-    if st.button("🟥 Set End", use_container_width=True):
-        st.session_state.mode = "end"
-
-    st.write("---")
-
-    if st.button("🎲 Random Maze", use_container_width=True):
-
-        st.session_state.maze = generate_random_maze()
-
-        st.session_state.path = []
-        st.session_state.visited = []
-
-        st.rerun()
-
     if st.button("🚀 Solve BFS", use_container_width=True):
 
-        path, visited = bfs(
-            st.session_state.maze,
-            st.session_state.start_pos,
-            st.session_state.end_pos
+        hasil_path, hasil_visit = bfs(
+            st.session_state.maze
         )
 
-        st.session_state.path = path
-        st.session_state.visited = visited
+        st.session_state.path = hasil_path
+        st.session_state.visited = hasil_visit
 
         st.rerun()
 
-    if st.button("🔄 Reset", use_container_width=True):
+    if st.button("🔄 Reset Maze", use_container_width=True):
 
         maze = []
 
@@ -243,8 +186,6 @@ with st.sidebar:
         st.session_state.maze = maze
         st.session_state.path = []
         st.session_state.visited = []
-        st.session_state.start_pos = (0, 0)
-        st.session_state.end_pos = (ROWS-1, COLS-1)
 
         st.rerun()
 
@@ -266,18 +207,22 @@ st.markdown("""
 🌐 AI Maze Pathfinder
 </div>
 <div class='subtitle'>
-Visualisasi BFS untuk mencari jalur tercepat
+Klik kotak untuk membuat atau menghapus tembok
 </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# INFO CARDS
+# INFO CARD
 # =========================================================
 c1, c2, c3 = st.columns(3)
 
 with c1:
 
-    status = "✅ Solusi Ditemukan" if st.session_state.path else "❌ Belum Ada Solusi"
+    status = (
+        "✅ Solusi Ditemukan"
+        if st.session_state.path
+        else "❌ Belum Ada Solusi"
+    )
 
     st.markdown(f"""
     <div class='card'>
@@ -305,7 +250,7 @@ with c3:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# MAZE DISPLAY
+# MAZE AREA
 # =========================================================
 st.write("## 🧩 Maze Area")
 
@@ -322,35 +267,47 @@ for i in range(ROWS):
         warna = "#ffffff"
         text = ""
 
+        # WALL
         if maze[i][j] == 1:
             warna = "#111827"
 
+        # START
         if maze[i][j] == "S":
             warna = "#22c55e"
             text = "S"
 
+        # END
         if maze[i][j] == "E":
             warna = "#ef4444"
             text = "E"
 
+        # VISITED
         if (i, j) in visited:
             warna = "#60a5fa"
 
+        # PATH
         if (i, j) in path:
             warna = "#facc15"
 
+        # AGAR START & END TIDAK TERTIMPA
         if maze[i][j] == "S":
             warna = "#22c55e"
 
         if maze[i][j] == "E":
             warna = "#ef4444"
 
+        # =====================================================
+        # TOMBOL KOTAK
+        # =====================================================
         tombol = cols[j].button(
             text if text else " ",
             key=f"{i}-{j}",
             use_container_width=True
         )
 
+        # =====================================================
+        # WARNA KOTAK
+        # =====================================================
         cols[j].markdown(
             f"""
             <div class='cell'
@@ -362,42 +319,20 @@ for i in range(ROWS):
         )
 
         # =====================================================
-        # CLICK EVENT
+        # KLIK KOTAK = TOGGLE TEMBOK
         # =====================================================
         if tombol:
 
-            mode = st.session_state.mode
+            # START & END TIDAK BISA DIUBAH
+            if maze[i][j] not in ["S", "E"]:
 
-            # WALL MODE
-            if mode == "wall":
-
+                # JIKA JALAN → JADI TEMBOK
                 if maze[i][j] == 0:
                     maze[i][j] = 1
 
+                # JIKA TEMBOK → JADI JALAN
                 elif maze[i][j] == 1:
                     maze[i][j] = 0
-
-            # START MODE
-            elif mode == "start":
-
-                old_x, old_y = st.session_state.start_pos
-
-                maze[old_x][old_y] = 0
-
-                maze[i][j] = "S"
-
-                st.session_state.start_pos = (i, j)
-
-            # END MODE
-            elif mode == "end":
-
-                old_x, old_y = st.session_state.end_pos
-
-                maze[old_x][old_y] = 0
-
-                maze[i][j] = "E"
-
-                st.session_state.end_pos = (i, j)
 
             st.session_state.path = []
             st.session_state.visited = []
@@ -405,7 +340,7 @@ for i in range(ROWS):
             st.rerun()
 
 # =========================================================
-# BFS VISIT ORDER
+# BFS TRAVERSAL
 # =========================================================
 st.write("---")
 
@@ -434,6 +369,6 @@ st.write("---")
 
 st.markdown("""
 <center>
-AI Maze Pathfinder • Struktur Data • BFS Algorithm ❤️
+AI Maze Pathfinder • BFS Algorithm • Struktur Data ❤️
 </center>
 """, unsafe_allow_html=True)
