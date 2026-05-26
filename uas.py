@@ -86,9 +86,9 @@ if 'root' not in st.session_state:
     documents.add_child(FileNode("Handini SI 25 P AIS", is_folder=True))
     documents.add_child(FileNode("Handini Struktur Data Pemrograman", is_folder=True))
     documents.add_child(FileNode("PENGANTAR JARINGAN KOMPUTER", is_folder=True))
-    documents.add_child(FileNode("Algoritma & Pemrograman.docx", is_folder=False, ukuran_kb=794, tipe_format="Microsoft Word D..."))
-    documents.add_child(FileNode("BASIS DATA LAUNDRY KILOAN OLEH 2.docx", is_folder=False, ukuran_kb=9012, tipe_format="Microsoft Word D..."))
-    documents.add_child(FileNode("basis data oleh oleh 2.xlsx", is_folder=False, ukuran_kb=13, tipe_format="Microsoft Excel W..."))
+    documents.add_child(FileNode("Algoritma & Pemrograman.docx", is_folder=False, ukuran_kb=794, tipe_format="Microsoft Word Document"))
+    documents.add_child(FileNode("BASIS DATA LAUNDRY KILOAN OLEH 2.docx", is_folder=False, ukuran_kb=9012, tipe_format="Microsoft Word Document"))
+    documents.add_child(FileNode("basis data oleh oleh 2.xlsx", is_folder=False, ukuran_kb=13, tipe_format="Microsoft Excel Worksheet"))
     
     st.session_state.root = root
 
@@ -97,10 +97,16 @@ if 'current_folder' not in st.session_state:
 
 
 # ====================================================================
-# 3. FUNGSI PEMBANTU NAVIGASI SIDEBAR
+# 3. FUNGSI PEMBANTU NAVIGASI (SUDAH DIPERBAIKI SECARA AMAN)
 # ====================================================================
 def dapatkan_breadcrumb(node):
-    return " 📂 This PC > " + " > ".join([] if node is None else [sementara.nama for sementara in [] if False else (lambda n: (lambda f, x: f(f, x))(lambda f, c: [c.nama] + f(f, c.parent) if c.parent else [c.nama], n)[::-1])(node)])
+    """Membuat susunan alamat teks di Address Bar atas (VERSI AMAN FIX)"""
+    jalur = []
+    sementara = node
+    while sementara is not None:
+        jalur.insert(0, sementara.nama)
+        sementara = sementara.parent
+    return " 📂 This PC > " + " > ".join(jalur)
 
 def render_sidebar_tree(node, depth=0):
     """Mencetak pohon navigasi folder di bilah kiri"""
@@ -154,7 +160,7 @@ with st.container():
                 
                 if not nama_kembar:
                     is_f = True if jenis_baru == "Folder" else False
-                    tipe_str = "File folder" if is_f else f"{ext_pilihan.split()[1][1:-1]} Document"
+                    tipe_str = "File folder" if is_f else f"Microsoft {ext_pilihan.split()[1][1:-1]} Document"
                     
                     # Tambah data ke tree
                     st.session_state.current_folder.add_child(FileNode(nama_fix, is_folder=is_f, ukuran_kb=ukuran_baru, tipe_format=tipe_str))
@@ -223,7 +229,7 @@ with panel_konten:
     st.markdown(f"## 🍧 Current Directory: {folder_sekarang.nama}")
     st.write(" ")
 
-    # Filter data berdasarkan isian kolom search bar (Pencarian Berfungsi Efektif)
+    # Filter data berdasarkan isian kolom search bar
     if kueri_cari.strip():
         daftar_tampil = [item for item in folder_sekarang.children if kueri_cari.lower() in item.nama.lower()]
     else:
@@ -232,8 +238,7 @@ with panel_konten:
     if not daftar_tampil:
         st.info("🍡 Folder ini masih kosong atau item tidak ditemukan.")
     else:
-        # === MEMBUAT TAMPILAN DETAILS VIEW PERSIS SEPERTI DI FOTO LAPTOP KAMU ===
-        # Membuat baris judul kolom tabel (Header)
+        # === TAMPILAN DETAILS VIEW TABEL PERSIS SEPERTI DI FOTO LAPTOP ===
         col_h_nama, col_h_tgl, col_h_tipe, col_h_ukuran, col_h_aksi = st.columns([4, 3, 3, 2, 2])
         with col_h_nama: st.markdown("**Name** 🔼")
         with col_h_tgl: st.markdown("**Date modified**")
@@ -242,11 +247,10 @@ with panel_konten:
         with col_h_aksi: st.markdown("**Action**")
         st.markdown("<hr style='margin: 5px 0px; border-color: #A29BFE;'>", unsafe_allow_html=True)
 
-        # Mencetak baris demi baris berkas secara berurutan ke bawah
         for idx, item in enumerate(daftar_tampil):
             col_nama, col_tgl, col_tipe, col_ukuran, col_aksi = st.columns([4, 3, 3, 2, 2])
             
-            # Ikon pembeda baris tabel
+            # Ikon estetika pastel pembeda folder dan file
             ikon = "🔮" if item.is_folder else "💎"
             
             with col_nama:
@@ -266,5 +270,4 @@ with panel_konten:
                 else:
                     st.button("File", key=f"tbl_file_{item.dapatkan_path_lengkap()}_{idx}", disabled=True)
             
-            # Garis tipis pembatas antar baris data biar rapi
             st.markdown("<hr style='margin: 2px 0px; border-color: #F1F2F6;'>", unsafe_allow_html=True)
