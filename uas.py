@@ -1,7 +1,7 @@
 import streamlit as st
 
-# 1. SET CONFIG & THEME AESTHETIC
-st.set_page_config(page_title="CloudSpace - File Explorer", layout="wide", page_icon="☁️")
+#untuk nama web browsernya
+st.set_page_config(page_title="File Explorer", layout="wide")
 
 # Menyuntikkan CSS Kustom untuk Background, Font, dan Efek Kartu Modern
 st.markdown("""
@@ -126,8 +126,8 @@ if "sistem_file" not in st.session_state:
     sistem_file = GeneralTree("CloudSpace")
     
     # Seeding awal dengan data tiruan + atribut ukuran file (MB)
-    dokumen = TreeNode("Dokumen Kuliah", is_folder=True)
-    foto = TreeNode("Media_Ekskul", is_folder=True)
+    dokumen = TreeNode("Dokumen ", is_folder=True)
+    foto = TreeNode("Download", is_folder=True)
     
     sistem_file.root.add_child(dokumen)
     sistem_file.root.add_child(foto)
@@ -147,7 +147,7 @@ if "sistem_file" not in st.session_state:
 # HEADER AESTHETIC DENGAN GRADASI WARNA (HTML/CSS)
 st.markdown("""
     <div style="background: linear-gradient(135deg, #4F46E5, #06B6D4); padding: 25px; border-radius: 15px; margin-bottom: 25px; color: white;">
-        <h1 style='margin:0; font-weight: 700;'>☁️ CloudSpace Drive</h1>
+        <h1 style='margin:0; font-weight: 700;'>🖥️ Home</h1>
         <p style='margin:5px 0 0 0; opacity: 0.9;'>Aplikasi Manajemen Penyimpanan Modern Berbasis Struktur Data General Tree</p>
     </div>
 """, unsafe_allow_html=True)
@@ -183,7 +183,7 @@ with st.sidebar:
             st.error("Item tidak ditemukan.")
             
     st.markdown("---")
-    st.markdown("### ⭐ Akses Cepat (Favorit)")
+    st.markdown("### ⭐ Koleksi Favorit")
     list_fav = st.session_state.sistem_file.dapatkan_semua_favorit()
     if not list_fav:
         st.caption("Belum ada berkas favorit.")
@@ -215,10 +215,10 @@ st.markdown(" ")
 kolom_files, kolom_aksi = st.columns([2, 1])
 
 with kolom_files:
-    st.subheader("📁 Konten Folder")
+    st.subheader("🗃️ My Files")
     
     if st.session_state.current_node.parent is not None:
-        if st.button("⬅️ Naik Satu Tingkat", use_container_width=True):
+        if st.button("🔙 Kembali", use_container_width=True):
             st.session_state.current_node = st.session_state.current_node.parent
             st.rerun()
             
@@ -252,9 +252,9 @@ with kolom_files:
                         st.button("Unduh 📥", key=f"dl_{id(child)}", use_container_width=True, disabled=True)
 
 with kolom_aksi:
-    st.subheader("🛠️ Panel Kontrol")
+    st.subheader("⚙️ Pengelola Berkas")
     
-    tab_tambah, tab_ubah, tab_hapus, tab_pohon = st.tabs(["➕ Tambah", "✏️ Rename", "🗑️ Hapus", "🌳 Tree"])
+    tab_tambah, tab_ubah, tab_hapus, tab_pohon = st.tabs(["📥 Tambah Berkas", "📝 Rename", "🗑️ Hapus", "🗂️ File Structure"])
     
     with tab_tambah:
         nama_baru = st.text_input("Nama Berkas/Folder Baru:", key="add_name").strip()
