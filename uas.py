@@ -1,6 +1,9 @@
 import streamlit as st
 
-#untuk nama web browsernya
+# ====================================================================
+# 1. KONFIGURASI HALAMAN & STYLE CSS
+# ====================================================================
+# untuk nama web browsernya
 st.set_page_config(page_title="File Explorer", layout="wide")
 
 # Menyuntikkan CSS Kustom untuk Background, Font, dan Efek Kartu Modern
@@ -120,32 +123,31 @@ def dapatkan_path_list(node):
 
 
 # ====================================================================
-# 4. INISIALISASI SESSION STATE (SUDAH DIPERBAIKI)
+# 4. INISIALISASI SESSION STATE (STRUKTUR REKURSIF BARU)
 # ====================================================================
 if "sistem_file" not in st.session_state:
-    # 1. Membuat Root Utama: Home
+    # Root Level 1: Home
     sistem_file = GeneralTree("🖥️ Home")
     
-    # 2. Membuat Node Local Disk (C:) dan memasukkannya ke dalam Home
+    # Level 2: Local Disk (C:) dimasukkan ke dalam Home
     local_disk_c = TreeNode("🖴 Local Disk (C:)", is_folder=True)
     sistem_file.root.add_child(local_disk_c)
 
-    # 3. Membuat folder Dokumen dan Download
+    # Level 3: Dokumen dan Download dimasukkan ke dalam Local Disk (C:)
     dokumen = TreeNode("Dokumen", is_folder=True)
     download = TreeNode("Download", is_folder=True)
-    
-    # 4. Memasukkan Dokumen dan Download ke dalam Local Disk (C:)
     local_disk_c.add_child(dokumen)
     local_disk_c.add_child(download)
 
-    # 5. Memasukkan berkas/file ke dalam masing-masing folder tujuan
+    # Level 4: Isi file di dalam masing-masing folder
     dokumen.add_child(TreeNode("Tugas_Struktur_Data.pdf", is_folder=False, ukuran_mb=12))
     dokumen.add_child(TreeNode("Catatan_Algoritma.txt", is_folder=False, ukuran_mb=2))
+    
     download.add_child(TreeNode("Pentas_Seni.jpg", is_folder=False, ukuran_mb=18))
     
-    # Menyimpan ke session state
     st.session_state.sistem_file = sistem_file
     st.session_state.current_node = sistem_file.root
+
 
 # ====================================================================
 # 5. ANTARMUKA UTAMA (STREAMLIT UI)
@@ -222,7 +224,8 @@ st.markdown(" ")
 kolom_files, kolom_aksi = st.columns([2, 1])
 
 with kolom_files:
-    st.subheader("🖴 Local Disk (C:)")
+    # Menampilkan nama direktori aktif secara dinamis sesuai posisi folder saat ini
+    st.subheader(f"{st.session_state.current_node.data}")
     
     if st.session_state.current_node.parent is not None:
         if st.button("🔙 Kembali", use_container_width=True):
@@ -234,7 +237,7 @@ with kolom_files:
         st.info("ℹ️ Folder ini kosong.")
     else:
         for child in children_nodes:
-            ikon = "📄 " if child.is_folder else dapatkan_ikon_file(child.data)
+            ikon = "📁 " if child.is_folder else dapatkan_ikon_file(child.data)
             label_ukuran = "" if child.is_folder else f"({child.ukuran_mb} MB)"
             fav_status = "⭐" if child.is_favorite else "☆"
             
