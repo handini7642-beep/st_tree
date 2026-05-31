@@ -1,19 +1,16 @@
 import streamlit as st
+import io
 
 # ====================================================================
 # 1. KONFIGURASI HALAMAN & STYLE CSS
 # ====================================================================
-# untuk nama web browsernya
-st.set_page_config(page_title="File Explorer", layout="wide")
+st.set_page_config(page_title="File Explorer Pro", layout="wide")
 
-# Menyuntikkan CSS Kustom untuk Background, Font, dan Efek Kartu Modern
 st.markdown("""
     <style>
-    /* Mengubah background utama aplikasi menjadi soft pastel/light gray */
     .stApp {
         background-color: #f8f9fa;
     }
-    /* Mengubah gaya container/card folder */
     div[data-testid="stCard"] {
         background-color: #ffffff;
         border-radius: 12px;
@@ -26,18 +23,26 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(0,0,0,0.08);
     }
+    .file-content {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ====================================================================
-# 2. STRUKTUR DATA: NODE UNTUK GENERAL TREE (ADVANCED)
+# 2. STRUKTUR DATA: NODE UNTUK GENERAL TREE
 # ====================================================================
 class TreeNode:
-    def __init__(self, data, is_folder=True, ukuran_mb=0):
+    def __init__(self, data, is_folder=True, ukuran_mb=0, konten_simulasi=""):
         self.data = data
         self.is_folder = is_folder  
-        self.ukuran_mb = ukuran_mb if not is_folder else 0 # File punya ukuran, folder dihitung otomatis
-        self.is_favorite = False    # Fitur Baru: Favorit
+        self.ukuran_mb = ukuran_mb if not is_folder else 0 
+        self.konten_simulasi = konten_simulasi if not is_folder else "" # Isi simulasi file
+        self.is_favorite = False    
         self.children = []          
         self.parent = None          
 
@@ -73,7 +78,6 @@ class GeneralTree:
             self.cari_global(keyword, child, hasil)
         return hasil
 
-    # Fitur Baru: Cari berkas bermarkah bintang/favorit di seluruh pohon (DFS)
     def dapatkan_semua_favorit(self, node=None, hasil=None):
         if node is None:
             node = self.root
@@ -123,37 +127,49 @@ def dapatkan_path_list(node):
 
 
 # ====================================================================
-# 4. INISIALISASI SESSION STATE (STRUKTUR REKURSIF BARU)
+# 4. INISIALISASI SESSION STATE
 # ====================================================================
 if "sistem_file" not in st.session_state:
-    # Root Level 1: Home
     sistem_file = GeneralTree("🖥️ Home")
     
-    # Level 2: Local Disk (C:) dimasukkan ke dalam Home
     local_disk_c = TreeNode("🖴 Local Disk (C:)", is_folder=True)
     sistem_file.root.add_child(local_disk_c)
 
-    # Level 3: Dokumen dan Download dimasukkan ke dalam Local Disk (C:)
     dokumen = TreeNode("Dokumen", is_folder=True)
     download = TreeNode("Download", is_folder=True)
     local_disk_c.add_child(dokumen)
     local_disk_c.add_child(download)
 
-    # Level 4: Isi file di dalam masing-masing folder
-    dokumen.add_child(TreeNode("Tugas_Struktur_Data.pdf", is_folder=False, ukuran_mb=12))
-    dokumen.add_child(TreeNode("Catatan_Algoritma.txt", is_folder=False, ukuran_mb=2))
+    # Menambahkan konten teks simulasi ke dalam file
+    dokumen.add_child(TreeNode(
+        "Tugas_Struktur_Data.pdf", 
+        is_folder=False, 
+        ukuran_mb=12,
+        konten_simulasi="=== [OUTPUT PDF VIEW] ===\nNama: Mahasiswa\nTugas: Struktur Data - Implementasi Tree\nStatus: Nilai A+"
+    ))
+    dokumen.add_child(TreeNode(
+        "Catatan_Algoritma.txt", 
+        is_folder=False, 
+        ukuran_mb=2,
+        konten_simulasi="Catatan Hari Ini:\n1. Belajar Tree Dasar\n2. Rekursi sangat seru!\n3. Modifikasi UI Streamlit selesai."
+    ))
     
-    download.add_child(TreeNode("Pentas_Seni.jpg", is_folder=False, ukuran_mb=18))
+    download.add_child(TreeNode(
+        "Pentas_Seni.jpg", 
+        is_folder=False, 
+        ukuran_mb=18,
+        konten_simulasi="=== [IMAGE VIEW SIMULATION] ===\n[ Gambar Berhasil Dimuat: Resolusi 1920x1080 - Suasana Pentas Seni Kampus ]"
+    ))
     
     st.session_state.sistem_file = sistem_file
     st.session_state.current_node = sistem_file.root
+    st.session_state.opened_file = None  # Menyimpan file yang sedang dibuka outputs-nya
 
 
 # ====================================================================
 # 5. ANTARMUKA UTAMA (STREAMLIT UI)
 # ====================================================================
 
-# HEADER AESTHETIC DENGAN GRADASI WARNA (HTML/CSS)
 st.markdown("""
     <div style="background: linear-gradient(135deg, #4F46E5, #06B6D4); padding: 25px; border-radius: 15px; margin-bottom: 25px; color: white;">
         <h1 style='margin:0; font-weight: 700;'>🗃️ My Files</h1>
@@ -161,12 +177,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# KONTEN UTAMA: MEMBAGI SIDEBAR DAN DASHBOARD UTAMA
 with st.sidebar:
     st.markdown("### 📊 Status Penyimpanan")
     stats = st.session_state.sistem_file.hitung_statistik()
     
-    # Fitur Baru: Progress Bar Kapasitas Drive (Maksimal Simulasi 100 MB)
     maks_kapasitas = 100
     persen_terpakai = min(stats['total_ukuran'] / maks_kapasitas, 1.0)
     st.progress(persen_terpakai)
@@ -186,7 +200,12 @@ with st.sidebar:
             for item in hasil_cari:
                 tipe_str = "Folder" if item.is_folder else "File"
                 if st.button(f"📍 Buka: {item.data} ({tipe_str})", key=f"search_{id(item)}", use_container_width=True):
-                    st.session_state.current_node = item if item.is_folder else item.parent
+                    if item.is_folder:
+                        st.session_state.current_node = item
+                        st.session_state.opened_file = None
+                    else:
+                        st.session_state.current_node = item.parent
+                        st.session_state.opened_file = item
                     st.rerun()
         else:
             st.error("Item tidak ditemukan.")
@@ -200,11 +219,15 @@ with st.sidebar:
         for fav_node in list_fav:
             ikon_fav = "📁 " if fav_node.is_folder else dapatkan_ikon_file(fav_node.data)
             if st.button(f"{ikon_fav} {fav_node.data}", key=f"fav_{id(fav_node)}", use_container_width=True):
-                st.session_state.current_node = fav_node if fav_node.is_folder else fav_node.parent
+                if fav_node.is_folder:
+                    st.session_state.current_node = fav_node
+                    st.session_state.opened_file = None
+                else:
+                    st.session_state.current_node = fav_node.parent
+                    st.session_state.opened_file = fav_node
                 st.rerun()
 
-
-# --- AREA KANAN: JALUR NAVIGASI (BREADCRUMBS) ---
+# AREA KANAN: JALUR NAVIGASI (BREADCRUMBS)
 b_nodes = dapatkan_path_list(st.session_state.current_node)
 cols_b = st.columns(len(b_nodes) * 2 - 1)
 
@@ -212,6 +235,7 @@ idx_col = 0
 for i, node in enumerate(b_nodes):
     if cols_b[idx_col].button(node.data, key=f"breadcrumb_{id(node)}"):
         st.session_state.current_node = node
+        st.session_state.opened_file = None
         st.rerun()
     idx_col += 1
     if idx_col < len(cols_b):
@@ -224,12 +248,12 @@ st.markdown(" ")
 kolom_files, kolom_aksi = st.columns([2, 1])
 
 with kolom_files:
-    # Menampilkan nama direktori aktif secara dinamis sesuai posisi folder saat ini
     st.subheader(f"{st.session_state.current_node.data}")
     
     if st.session_state.current_node.parent is not None:
         if st.button("🔙 Kembali", use_container_width=True):
             st.session_state.current_node = st.session_state.current_node.parent
+            st.session_state.opened_file = None
             st.rerun()
             
     children_nodes = st.session_state.current_node.children
@@ -241,25 +265,54 @@ with kolom_files:
             label_ukuran = "" if child.is_folder else f"({child.ukuran_mb} MB)"
             fav_status = "⭐" if child.is_favorite else "☆"
             
-            # Membungkus setiap item di dalam komponen ber-border estetis
             with st.container(border=True):
                 c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
                 c1.markdown(f"#### {ikon} {child.data} <span style='font-size:12px; color:gray;'>{label_ukuran}</span>", unsafe_allow_html=True)
                 
-                # Tombol Favorit (Bintang)
                 with c2:
                     if st.button(f"{fav_status} Favorit", key=f"fav_btn_{id(child)}", use_container_width=True):
                         child.is_favorite = not child.is_favorite
                         st.rerun()
                 
-                # Tombol Aksi Masuk Folder jika tipe komponen adalah Folder
                 with c3:
                     if child.is_folder:
                         if st.button("Buka 📂", key=f"buka_{id(child)}", use_container_width=True):
                             st.session_state.current_node = child
+                            st.session_state.opened_file = None
                             st.rerun()
                     else:
-                        st.button("Unduh 📥", key=f"dl_{id(child)}", use_container_width=True, disabled=True)
+                        if st.button("Buka 📂", key=f"buka_file_{id(child)}", use_container_width=True):
+                            st.session_state.opened_file = child
+                            st.rerun()
+                
+                with c4:
+                    if child.is_folder:
+                        st.button("Unduh 📥", key=f"dl_f_{id(child)}", use_container_width=True, disabled=True)
+                    else:
+                        # PROSES DOWNLOAD REAL: Membuat file virtual instan di memori RAM
+                        file_buffer = io.BytesIO(child.konten_simulasi.encode('utf-8'))
+                        st.download_button(
+                            label="Unduh 📥",
+                            data=file_buffer,
+                            file_name=child.data,
+                            mime="text/plain",
+                            key=f"dl_real_{id(child)}",
+                            use_container_width=True
+                        )
+
+    # === AREA PREVIEW OUTPUT DI BAWAH FILE MANAGER ===
+    if st.session_state.opened_file is not None:
+        st.markdown("---")
+        st.markdown(f"### 🖥️ Viewer Output: `{st.session_state.opened_file.data}`")
+        # Menampilkan teks simulasi di dalam box modis bergaya terminal
+        st.markdown(f"""
+        <div class="file-content">
+            {st.session_state.opened_file.konten_simulasi.replace('\n', '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Tutup File Preview ❌"):
+            st.session_state.opened_file = None
+            st.rerun()
 
 with kolom_aksi:
     st.subheader("⚙️ Pengelola Berkas")
@@ -270,7 +323,6 @@ with kolom_aksi:
         nama_baru = st.text_input("Nama Berkas/Folder Baru:", key="add_name").strip()
         tipe = st.radio("Jenis Objek:", ("Folder", "File"), horizontal=True)
         
-        # Input ukuran tambahan hanya jika membuat File
         ukuran_input = 0
         if tipe == "File":
             ukuran_input = st.number_input("Ukuran Berkas (MB):", min_value=1, max_value=50, value=2)
@@ -280,12 +332,18 @@ with kolom_aksi:
                 st.error("Nama tidak boleh kosong!")
             elif any(c.data.lower() == nama_baru.lower() for c in st.session_state.current_node.children):
                 st.error("Nama sudah terpakai!")
-            # Validasi kapasitas penuh
             elif tipe == "File" and (stats['total_ukuran'] + ukuran_input > maks_kapasitas):
                 st.error("❌ Gagal! Penyimpanan penuh, tidak muat.")
             else:
                 is_folder_bool = (tipe == "Folder")
-                st.session_state.current_node.add_child(TreeNode(nama_baru, is_folder=is_folder_bool, ukuran_mb=ukuran_input))
+                # Jika bikin file baru lewat UI, kita buat konten defaultnya otomatis
+                konten_def = f"Ini adalah isi data otomatis untuk berkas {nama_baru}." if not is_folder_bool else ""
+                st.session_state.current_node.add_child(TreeNode(
+                    nama_baru, 
+                    is_folder=is_folder_bool, 
+                    ukuran_mb=ukuran_input, 
+                    konten_simulasi=konten_def
+                ))
                 st.success(f"Berhasil membuat {tipe.lower()} '{nama_baru}'")
                 st.rerun()
 
@@ -314,6 +372,8 @@ with kolom_aksi:
             if st.button("Hapus Permanen", type="primary", use_container_width=True):
                 for child in st.session_state.current_node.children:
                     if child.data == target_hapus:
+                        if st.session_state.opened_file == child:
+                            st.session_state.opened_file = None
                         st.session_state.current_node.remove_child(child)
                         st.rerun()
                         
