@@ -123,7 +123,7 @@ def dapatkan_path_list(node):
 # 4. INISIALISASI SESSION STATE
 # ====================================================================
 if "sistem_file" not in st.session_state:
-    sistem_file = GeneralTree("CloudSpace")
+    sistem_file = GeneralTree("🖥️ Home")
     
     # Seeding awal dengan data tiruan + atribut ukuran file (MB)
     dokumen = TreeNode("Dokumen ", is_folder=True)
@@ -147,8 +147,8 @@ if "sistem_file" not in st.session_state:
 # HEADER AESTHETIC DENGAN GRADASI WARNA (HTML/CSS)
 st.markdown("""
     <div style="background: linear-gradient(135deg, #4F46E5, #06B6D4); padding: 25px; border-radius: 15px; margin-bottom: 25px; color: white;">
-        <h1 style='margin:0; font-weight: 700;'>🖥️ Home</h1>
-        <p style='margin:5px 0 0 0; opacity: 0.9;'>Aplikasi Manajemen Penyimpanan Modern Berbasis Struktur Data General Tree</p>
+        <h1 style='margin:0; font-weight: 700;'>🗃️ My Files</h1>
+        <p style='margin:5px 0 0 0; opacity: 0.9;'>Aplikasi Manajemen Smart File Management</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -215,7 +215,7 @@ st.markdown(" ")
 kolom_files, kolom_aksi = st.columns([2, 1])
 
 with kolom_files:
-    st.subheader("🗃️ My Files")
+    st.subheader("🖴 Local Disk (C:)")
     
     if st.session_state.current_node.parent is not None:
         if st.button("🔙 Kembali", use_container_width=True):
@@ -227,7 +227,7 @@ with kolom_files:
         st.info("ℹ️ Folder ini kosong.")
     else:
         for child in children_nodes:
-            ikon = "📁 " if child.is_folder else dapatkan_ikon_file(child.data)
+            ikon = "📄 " if child.is_folder else dapatkan_ikon_file(child.data)
             label_ukuran = "" if child.is_folder else f"({child.ukuran_mb} MB)"
             fav_status = "⭐" if child.is_favorite else "☆"
             
