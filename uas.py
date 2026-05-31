@@ -120,25 +120,32 @@ def dapatkan_path_list(node):
 
 
 # ====================================================================
-# 4. INISIALISASI SESSION STATE
+# 4. INISIALISASI SESSION STATE (SUDAH DIPERBAIKI)
 # ====================================================================
 if "sistem_file" not in st.session_state:
+    # 1. Membuat Root Utama: Home
     sistem_file = GeneralTree("🖥️ Home")
     
-    # Seeding awal dengan data tiruan + atribut ukuran file (MB)
-    dokumen = TreeNode("Dokumen ", is_folder=True)
-    foto = TreeNode("Download", is_folder=True)
-    
-    sistem_file.root.add_child(dokumen)
-    sistem_file.root.add_child(foto)
+    # 2. Membuat Node Local Disk (C:) dan memasukkannya ke dalam Home
+    local_disk_c = TreeNode("🖴 Local Disk (C:)", is_folder=True)
+    sistem_file.root.add_child(local_disk_c)
 
+    # 3. Membuat folder Dokumen dan Download
+    dokumen = TreeNode("Dokumen", is_folder=True)
+    download = TreeNode("Download", is_folder=True)
+    
+    # 4. Memasukkan Dokumen dan Download ke dalam Local Disk (C:)
+    local_disk_c.add_child(dokumen)
+    local_disk_c.add_child(download)
+
+    # 5. Memasukkan berkas/file ke dalam masing-masing folder tujuan
     dokumen.add_child(TreeNode("Tugas_Struktur_Data.pdf", is_folder=False, ukuran_mb=12))
     dokumen.add_child(TreeNode("Catatan_Algoritma.txt", is_folder=False, ukuran_mb=2))
-    foto.add_child(TreeNode("Pentas_Seni.jpg", is_folder=False, ukuran_mb=18))
+    download.add_child(TreeNode("Pentas_Seni.jpg", is_folder=False, ukuran_mb=18))
     
+    # Menyimpan ke session state
     st.session_state.sistem_file = sistem_file
     st.session_state.current_node = sistem_file.root
-
 
 # ====================================================================
 # 5. ANTARMUKA UTAMA (STREAMLIT UI)
